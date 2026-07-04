@@ -12,14 +12,33 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.room.Room
+import com.example.data.AppDatabase
+import com.example.data.UserRepository
+import com.example.ui.GameState
+import com.example.ui.GameViewModel
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
+  private lateinit var db: AppDatabase
+  private lateinit var viewModel: GameViewModel
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    
+    db = Room.databaseBuilder(
+      applicationContext,
+      AppDatabase::class.java, "game-database"
+    ).build()
+    
+    val repository = UserRepository(db.userDao())
+    viewModel = GameViewModel(repository)
+
     enableEdgeToEdge()
     setContent {
       MyApplicationTheme {
@@ -27,8 +46,12 @@ class MainActivity : ComponentActivity() {
           modifier = Modifier.fillMaxSize(),
           color = MaterialTheme.colorScheme.background,
         ) {
+          val state by viewModel.uiState.collectAsState()
           Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(name = "Android", modifier = Modifier.padding(innerPadding))
+            when(state) {
+              is GameState.Login -> LoginScreen(viewModel, modifier = Modifier.padding(innerPadding))
+              is GameState.Playing -> PlayingScreen((state as GameState.Playing).user, modifier = Modifier.padding(innerPadding))
+            }
           }
         }
       }
@@ -37,10 +60,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun LoginScreen(viewModel: GameViewModel, modifier: Modifier = Modifier) {
+  Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Text("Login / Register (Placeholder for simplicity)", color = MaterialTheme.colorScheme.onBackground)
+  }
+}
+
+@Composable
+fun PlayingScreen(user: com.example.data.User, modifier: Modifier = Modifier) {
   Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
     Text(
-      text = "Hello $name!",
+      text = "Welcome ${user.username}! Game Tutorial...",
       color = MaterialTheme.colorScheme.onBackground,
       style = MaterialTheme.typography.headlineLarge.copy(
         fontWeight = FontWeight.Light
